@@ -36,7 +36,7 @@ The original *kubernetes-for-windows* was modified by @pablodav trying to reuse 
     - [x] External communication to NodePort service via Windows node.
     - [x] External communication to NodePort service via Linux node.
     - [x] Communication with external IPs (i.e. outbound NAT) from Linux pods.
-    - [ ] Communication with external IPs (i.e. outbound NAT) from Windows pods - **this is the most significant issue, with current Windows HNS and Hyper-V Virtual Switch it is not possible to achieve outbound NAT without losing pod-to-pod communication from Windows nodes**. 
+    - [ ] Communication with external IPs (i.e. outbound NAT) from Windows pods - **this is the most significant issue, with current Windows HNS and Hyper-V Virtual Switch it is not possible to achieve outbound NAT without losing pod-to-pod communication from Windows nodes**.
  3. There are problems with automatic configuration of DNS in Windows pods (depends on Windows version). Some workarounds have been posted in this [azure-acs-engine issue](https://github.com/Azure/acs-engine/issues/2027).
  4. It is not possible to use Ansible Remote provisioner with Ansible 2.5.0 and Packer 1.2.2 for Windows nodes due to the following exception:
 ```shell
@@ -66,9 +66,29 @@ Ansible only:
 
 \+ Packer:
 1. Packer 1.2.2+ installed on Windows host (visible in PATH).
-2. Windows Server 1709 (Jan 2018) ISO downloaded. 
+2. Windows Server 1709 (Jan 2018) ISO downloaded.
 3. Ubuntu 16.04 LTS (Xenial) ISO downloaded.
+#### Prepare Windows Node to access Ansible Remotely
 
+ - To use this script to enable https port 5986, run the following in PowerShell:
+
+```
+
+
+$url = "https://raw.githubusercontent.com/ansible/ansible/devel/examples/scripts/ConfigureRemotingForAnsible.ps1"
+$file = "$env:temp\ConfigureRemotingForAnsible.ps1"
+
+(New-Object -TypeName System.Net.WebClient).DownloadFile($url, $file)
+
+powershell.exe -ExecutionPolicy ByPass -File $file
+winrm enumerate winrm/config/Listener
+```
+- Install chocolatey package manager to avoid error while running ansible-playbook
+
+```
+Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+
+```
 ## Flannel and CNI plugins for Windows notes
 Windows has limited support for different pod networks, as mentioned in [official Kubernetes Windows guide](https://kubernetes.io/docs/getting-started-guides/windows/). Flannel with host-gw (and vxlan) backends and appropriate CNI plugins are currently in experimental stage and are available as the following pull requests by [rakelkar](https://github.com/rakelkar):
 https://github.com/coreos/flannel/pull/921
@@ -174,7 +194,7 @@ Then copy these files to your inventory:
 ```shell
 ├── ansible.cfg  # It will have the roles_path and library path you can read and add to your own ansible.cfg file
 ├── inventory  # For all files in inventory you have a sample in this project
-│   ├── kubernetes.ini 
+│   ├── kubernetes.ini
 │   ├── group_vars
 │   │   ├── k8s-cluster-local  # Directory with vars for group k8s-cluster-local
 │   │   │   ├── all-k8s.yml
